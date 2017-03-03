@@ -2,13 +2,17 @@ package br.com.increaseit.websocket;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
+import java.rmi.RemoteException;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import br.com.increaseit.frontend.TrayIconCTI;
 
 public class WebsocketServer extends WebSocketServer{
 
@@ -51,9 +55,54 @@ public class WebsocketServer extends WebSocketServer{
     @Override
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Message from client: " + message);
-        for (WebSocket sock : conns) {
-            sock.send(message);
-        }
+        
+		JSONObject obj = new JSONObject(message);
+		String action = obj.getString("action");
+		if(action.equalsIgnoreCase("makeCall")) {
+			try {
+				TrayIconCTI.ctiConnector.makeCall(obj.getString("station"), obj.getString("dialednum"));
+				conn.send("0");
+			} catch (RemoteException e) {
+				conn.send("-1");
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				conn.send("-1");
+				e.printStackTrace();
+			}
+		}
+		if(action.equalsIgnoreCase("answerCall")) {
+			try {
+				TrayIconCTI.ctiConnector.answerCall(obj.getString("station"));
+				conn.send("0");
+			} catch (RemoteException e) {
+				conn.send("-1");
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				conn.send("-1");
+				e.printStackTrace();
+			}
+		}
+		if(action.equalsIgnoreCase("disconnectCall")) {
+			try {
+				TrayIconCTI.ctiConnector.releaseCall(obj.getString("station"));
+				conn.send("0");
+			} catch (RemoteException e) {
+				conn.send("-1");
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				conn.send("-1");
+				e.printStackTrace();
+			}
+		}
+        		
+        
+        //conn.send("Recebi a sua mensage: "+message);
     }
 
     @Override

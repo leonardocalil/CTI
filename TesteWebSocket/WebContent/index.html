@@ -5,15 +5,18 @@
 <title>Insert title here</title>
 
 <script type="text/javascript">
+var host = "ws://127.0.0.1:90/";
+var socket; 
 try{
-    var host = "ws://127.0.0.1:90/";
-    var socket = new WebSocket(host);
+    
+    socket = new WebSocket(host);
     console.log(socket.readyState);
     socket.onopen = function(){
         console.log(socket.readyState);
     };
         socket.onmessage = function(msg){
             console.log(msg.data);
+            document.getElementById("receive").innerHTML = msg.data;
         };
         socket.onclose = function(){
             console.log(socket.readyState);
@@ -26,10 +29,32 @@ try{
     } catch(exception){
         console.log(exception);
     }
+function discar() {	
+	var msg = "{action: \"makeCall\",station: \""+document.getElementById("ramalId").value+"\", dialednum: \""+document.getElementById("destinoId").value+"\"}";
+	socket.send(msg);
+}    
+function atender() {
+	var msg = "{action: \"answerCall\",station: \""+document.getElementById("ramalId").value+"\"}";	
+	socket.send(msg);
+}
+function desligar() {	
+	var msg = "{action: \"disconnectCall\",station: \""+document.getElementById("ramalId").value+"\"}";
+	socket.send(msg);
+}
 </script>
 
 </head>
 <body>
+<label>Ramal:</label>
+<input type="text" id="ramalId" /><br />
 
+<label>Destino:</label>
+<input type="text" id="destinoId" /> <br />
+<button onclick="discar()">Discar</button> <button onclick="atender()">Atender</button><button onclick="desligar()">Desligar</button>
+
+<br />
+<br />
+<label>Recebidos:</label>
+<div id="receive"></div>
 </body>
 </html>
