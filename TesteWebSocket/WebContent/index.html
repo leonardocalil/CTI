@@ -41,16 +41,30 @@ function desligar() {
 	var msg = "{action: \"disconnectCall\",station: \""+document.getElementById("ramalId").value+"\"}";
 	socket.send(msg);
 }
+function logar() {	
+	var msg = "{action: \"login\",station: \""+document.getElementById("ramalId").value+"\", agent: \""+document.getElementById("agenteId").value+"\"}";
+	socket.send(msg);
+}
+function logout() {	
+	var msg = "{action: \"logout\",station: \""+document.getElementById("ramalId").value+"\"}";
+	socket.send(msg);
+}
 </script>
 
 </head>
 <body>
 <label>Ramal:</label>
 <input type="text" id="ramalId" /><br />
+<label>Agente:</label>
+<input type="text" id="agenteId" /><br />
 
 <label>Destino:</label>
 <input type="text" id="destinoId" /> <br />
-<button onclick="discar()">Discar</button> <button onclick="atender()">Atender</button><button onclick="desligar()">Desligar</button>
+<button onclick="discar()">Discar</button> 
+<button onclick="atender()">Atender</button>
+<button onclick="desligar()">Desligar</button>
+<button onclick="logar()">Logar</button>
+<button onclick="logout()">Deslogar</button>
 
 <br />
 <br />

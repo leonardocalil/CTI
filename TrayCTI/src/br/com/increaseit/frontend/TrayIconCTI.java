@@ -28,7 +28,8 @@ import br.com.increaseit.websocket.WebsocketServer;
 
 public class TrayIconCTI {
 	
-	public static CtiConnector ctiConnector = new CtiConnector(); 
+	public static CtiConnector ctiConnector = null; 
+	public static WebsocketServer server = null;
 	
     public static void main(String[] args) {
         /* Use an appropriate Look and Feel */
@@ -48,7 +49,7 @@ public class TrayIconCTI {
         UIManager.put("swing.boldMetal", Boolean.FALSE);
         //Schedule a job for the event-dispatching thread:
         //adding TrayIcon.
-        WebsocketServer server = null;
+        
         
         		
         try {
@@ -59,13 +60,13 @@ public class TrayIconCTI {
 			e.printStackTrace();
 		}
         
-        
-        
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 createAndShowGUI();
             }
         });
+        
+        ctiConnector = new CtiConnector();
     }
     
     private static void createAndShowGUI() {

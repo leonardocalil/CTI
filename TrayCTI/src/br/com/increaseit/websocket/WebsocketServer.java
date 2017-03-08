@@ -71,8 +71,7 @@ public class WebsocketServer extends WebSocketServer{
 				conn.send("-1");
 				e.printStackTrace();
 			}
-		}
-		if(action.equalsIgnoreCase("answerCall")) {
+		} else if(action.equalsIgnoreCase("answerCall")) {
 			try {
 				TrayIconCTI.ctiConnector.answerCall(obj.getString("station"));
 				conn.send("0");
@@ -85,8 +84,7 @@ public class WebsocketServer extends WebSocketServer{
 				conn.send("-1");
 				e.printStackTrace();
 			}
-		}
-		if(action.equalsIgnoreCase("disconnectCall")) {
+		} else  if(action.equalsIgnoreCase("disconnectCall")) {
 			try {
 				TrayIconCTI.ctiConnector.releaseCall(obj.getString("station"));
 				conn.send("0");
@@ -99,6 +97,10 @@ public class WebsocketServer extends WebSocketServer{
 				conn.send("-1");
 				e.printStackTrace();
 			}
+		} else if(action.equalsIgnoreCase("login")) {
+			TrayIconCTI.ctiConnector.login(obj.getString("agent"), null, obj.getString("station"));
+		} else if(action.equalsIgnoreCase("logout")) {
+			TrayIconCTI.ctiConnector.logout();
 		}
         		
         
@@ -113,6 +115,13 @@ public class WebsocketServer extends WebSocketServer{
             // do some thing if required
         }
         System.out.println("ERROR from " + conn.getRemoteSocketAddress().getAddress().getHostAddress());
+    }
+    
+    public void send(String msg) {
+    	for(WebSocket conn : conns) {
+    		conn.send(msg);
+    	}
+    	
     }
 
 	
