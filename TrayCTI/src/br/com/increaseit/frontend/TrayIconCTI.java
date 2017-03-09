@@ -5,6 +5,7 @@ package br.com.increaseit.frontend;
 
 import java.awt.AWTException;
 import java.awt.CheckboxMenuItem;
+import java.awt.Desktop;
 import java.awt.Image;
 import java.awt.Menu;
 import java.awt.MenuItem;
@@ -16,6 +17,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.IOException;
+import java.net.URI;
 
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
@@ -67,6 +69,16 @@ public class TrayIconCTI {
         });
         
         ctiConnector = new CtiConnector();
+    }
+    
+    public static void openBrowser() {
+    	try {
+    		Desktop d = Desktop.getDesktop();
+    		d.browse( new URI( "http://localhost:8080/TesteWebSocket/index.html" ) );			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
     
     private static void createAndShowGUI() {

@@ -13,10 +13,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import br.com.increaseit.frontend.TrayIconCTI;
+import br.com.increaseit.util.User;
 
 public class WebsocketServer extends WebSocketServer{
 
-	private Set<WebSocket> conns;
+	private Set<User> users;
 	
 	
 	public static void main(String[] args) {
@@ -28,13 +29,13 @@ public class WebsocketServer extends WebSocketServer{
 	public WebsocketServer() {
 		
 		super(new InetSocketAddress(90));
-        conns = new HashSet<>();
+		users = new HashSet<>();
 	}
 
 
 	public WebsocketServer(int port) throws IOException {
 		super(new InetSocketAddress(port));
-        conns = new HashSet<>();
+		users = new HashSet<>();
 		
 	}
 
@@ -42,13 +43,22 @@ public class WebsocketServer extends WebSocketServer{
 
 	@Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        conns.add(conn);
+		User user = new User();
+		user.setConn(conn);
+		user.setAgentId(TrayIconCTI.ctiConnector.getAgentId());
+		user.setStation(TrayIconCTI.ctiConnector.getDeviceId());
+        users.add(user);
         System.out.println("New connection from " + conn.getRemoteSocketAddress().getAddress().getHostAddress());
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        conns.remove(conn);
+    	for(User user : users) {
+    		if(user.getConn() ==  conn) {
+    			users.remove(user);    			
+    			break;
+    		}
+    	}        
         System.out.println("Closed connection to " + conn.getRemoteSocketAddress().getAddress().getHostAddress());
     }
 
@@ -58,6 +68,14 @@ public class WebsocketServer extends WebSocketServer{
         
 		JSONObject obj = new JSONObject(message);
 		String action = obj.getString("action");
+		
+		User user = null;
+		for(User us : users) {
+			if(us.getConn() == conn) {
+				user = us;
+			}
+		}
+		
 		if(action.equalsIgnoreCase("makeCall")) {
 			try {
 				TrayIconCTI.ctiConnector.makeCall(obj.getString("station"), obj.getString("dialednum"));
@@ -97,10 +115,29 @@ public class WebsocketServer extends WebSocketServer{
 				conn.send("-1");
 				e.printStackTrace();
 			}
-		} else if(action.equalsIgnoreCase("login")) {
-			TrayIconCTI.ctiConnector.login(obj.getString("agent"), null, obj.getString("station"));
+		} else if(action.equalsIgnoreCase("login")) {			
+			try {
+				TrayIconCTI.ctiConnector.login(obj.getString("agent"), null, obj.getString("station"));
+				if(user != null) {
+					if(obj.getString("station") != null && obj.getString("station").length() > 0 &&
+							obj.getString("agent") != null && obj.getString("agent").length() > 0) {
+						user.setStation(obj.getString("station"));
+						user.setAgentId(obj.getString("agent"));
+					}
+				}								
+				conn.send("Login [Agente: " + obj.getString("agent") + " | Ramal: " + obj.getString("station") + "]");
+			} catch(Exception e) {
+				conn.send(e.getMessage());
+			}
 		} else if(action.equalsIgnoreCase("logout")) {
-			TrayIconCTI.ctiConnector.logout();
+			try {
+				TrayIconCTI.ctiConnector.logout();
+				if(user != null) {
+					user.setAgentId("");
+				}
+			} catch(Exception e) {
+				conn.send(e.getMessage());
+			}
 		}
         		
         
@@ -111,18 +148,34 @@ public class WebsocketServer extends WebSocketServer{
     public void onError(WebSocket conn, Exception ex) {
         //ex.printStackTrace();
         if (conn != null) {
-            conns.remove(conn);
-            // do some thing if required
+        	for(User user : users) {
+        		if(user.getConn() == conn) {
+        			users.remove(user);
+        			break;
+        		}
+        	}
+        	System.out.println("ERROR from " + conn.getRemoteSocketAddress().getAddress().getHostAddress());
         }
-        System.out.println("ERROR from " + conn.getRemoteSocketAddress().getAddress().getHostAddress());
+        
     }
     
-    public void send(String msg) {
-    	for(WebSocket conn : conns) {
-    		conn.send(msg);
-    	}
+    public void send(String station, String msg) {
+    	for(User user : users) {
+    		if(station.equals(user.getStation())) {
+    			if(user.getConn() != null ) {
+    				user.getConn().send(msg);
+    			}
+    		}
+    	}    	
     	
     }
+
+
+	public Set<User> getUsers() {
+		return users;
+	}
+    
+    
 
 	
 	

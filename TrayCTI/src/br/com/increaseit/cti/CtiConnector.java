@@ -25,6 +25,7 @@ import com.avaya.jtapi.tsapi.LucentAddress;
 import com.avaya.jtapi.tsapi.LucentTerminal;
 
 import br.com.increaseit.frontend.TrayIconCTI;
+import br.com.increaseit.util.User;
 
 
 public class CtiConnector extends Observable implements CallControlTerminalConnectionListener, ProviderListener {
@@ -39,7 +40,7 @@ public class CtiConnector extends Observable implements CallControlTerminalConne
 	public static final String DATEFORMAT_ORACLE = "DD/MM/YYYY HH24:MI:SS";
 	
 	private String deviceId;
-	
+	private String agentId;
 	private Address myAddress;
 	private Terminal myTerminal;
 	private Terminal myTerminalEvent;
@@ -196,49 +197,44 @@ public class CtiConnector extends Observable implements CallControlTerminalConne
 		}
     }
     
-    public void logout() {
+    public void logout() throws Exception{
     	try {
 
 			try {
-				myAgent.logout();
-				myAgent = null;
-				deviceId = null;
+				this.myAgent.logout();
+				this.myAgent = null;
+				this.deviceId = null;
+				this.agentId = null;
 				//((LucentTerminal) myTerminal).removeAgent(myAgent);
 			} catch (Exception e) {
-				TrayIconCTI.server.send("Erro ao executar comando de logout: "+e.getMessage());
 				System.out.println("Erro ao executar comando de logout: "+e.getMessage());
+				throw new Exception("Erro ao executar comando de logout: "+e.getMessage());
+				
 			}
 			try {
 				myTerminalEvent.removeCallListener(this);				
 			} catch (Exception e) {
-				TrayIconCTI.server.send("Erro ao retirar monitoracao: "+e.getMessage());
 				System.out.println("Erro ao retirar monitoracao: "+e.getMessage());
+				throw new Exception("Erro ao retirar monitoracao: "+e.getMessage());
 			}
 
 		} catch (Exception e) {
-			TrayIconCTI.server.send("Erro ao efetuar logout: "+e.getMessage());
-			System.out.println("Erro ao efetuar logout: "+e.getMessage());			
+			System.out.println("Erro ao efetuar logout: "+e.getMessage());
+			throw new Exception("Erro ao efetuar logout: "+e.getMessage());
 		}
     }
-    public void login(String agentId, String agentPwd, String deviceId) {
+    public void login(String agentId, String agentPwd, String deviceId) throws Exception {
 		try {
 			//this.loggedInUser = new User(login, agentId, deviceId, hostName);
-
-			this.deviceId = deviceId;
-			
 			myAddress = provider.getAddress(deviceId);
-			
-			
 			
 			try{
 				myTerminal = provider.getTerminal(deviceId);
 			}catch(Exception e){
-				
 				//caso seja um ramal inválido
 				if (e.getMessage() != null && e.getMessage().contains("device is not a terminal")){
 					System.out.println("Ramal Inválido: " + deviceId);
-					TrayIconCTI.server.send("Ramal Inválido: " + deviceId);					
-					return;	
+					throw new Exception("Ramal Inválido: " + deviceId);									
 				}
 				
 
@@ -250,46 +246,39 @@ public class CtiConnector extends Observable implements CallControlTerminalConne
 			
 			try {
 				myAgent = new AgentImpl((LucentTerminal)myTerminal, (LucentAddress)myAddress, agentId, agentPwd, true);
+				
+				this.deviceId = deviceId;
+				this.agentId = agentId;
 			} catch (Exception e) {
 				
 				//caso seja um agent invalido retorna o erro
 				if (e.getMessage() != null && e.getMessage().contains("Invalid AgentId is specified")){
-					
 					System.out.println("Agente Inválido: " + agentId);
-					TrayIconCTI.server.send("Agente Inválido: " + agentId);
-					
-					return;
+					throw new Exception("Agente Inválido: " + agentId);										
 				}
 				
 				//caso ja alguem esteja logado neste ramal
 				if (e.getMessage() != null && e.getMessage().contains("There is already an Agent logged on at the station")){
 					
 					System.out.println("Já existe um agente logado neste ramal.");
-					TrayIconCTI.server.send("Já existe um agente logado neste ramal.");
-					
-					return;	
+					throw new Exception("Já existe um agente logado neste ramal.");
 				}
 				
 				//caso ja esteja logado em outro ramal
 				if (e.getMessage() != null && e.getMessage().contains("Agent is already logged into another Station")){
 					
 					System.out.println("Este agente já está logado em outro ramal.");
-					TrayIconCTI.server.send("Este agente já está logado em outro ramal.");
-					
-					return;	
+					throw new Exception("Este agente já está logado em outro ramal.");
 				}
 			}
-
-			TrayIconCTI.server.send("Login [Agente: " + agentId + " | Ramal: " + deviceId + "]");
-
 		} catch (ResourceUnavailableException e) {
+			
 			System.out.println("### ResourceUnavailableException ### " + e.getMessage());
-			TrayIconCTI.server.send("### ResourceUnavailableException ### " + e.getMessage());
+			throw new Exception("### ResourceUnavailableException ### " + e.getMessage());
 		} catch (Exception e) {
 			System.out.println("AgentId: " + agentId + " - DeviceId: " + deviceId+ " - " + e.getMessage());
-			TrayIconCTI.server.send("AgentId: " + agentId + " - DeviceId: " + deviceId+ " - " + e.getMessage());
+			throw new Exception("AgentId: " + agentId + " - DeviceId: " + deviceId+ " - " + e.getMessage());
 		}
-		return;
 	}
     
 	@Override
@@ -329,7 +318,9 @@ public class CtiConnector extends Observable implements CallControlTerminalConne
 
 	@Override
 	public void connectionAlerting(CallControlConnectionEvent arg0) {
-		System.out.println("connectionAlerting");
+		System.out.println("connectionAlerting-CallControlConnectionEvent: "+arg0.getCallingAddress().getName());
+		
+		
 		// TODO Auto-generated method stub
 		
 	}
@@ -466,7 +457,22 @@ public class CtiConnector extends Observable implements CallControlTerminalConne
 	@Override
 	public void connectionAlerting(ConnectionEvent arg0) {
 		// TODO Auto-generated method stub
-		System.out.println("connectionAlerting");
+		
+		System.out.println("connectionAlerting-ConnectionEvent: "+arg0.getConnection().getAddress().getName());
+		if(this.deviceId  != null) {
+			if(arg0.getConnection().getAddress().getName().equals(this.deviceId)) {
+				boolean find = false;
+				for(User user : TrayIconCTI.server.getUsers()) {
+					if(this.deviceId.equals(user.getStation())) {
+						find = true;
+					}
+				}
+				if(!find) {
+					TrayIconCTI.openBrowser();
+				}
+			}
+		}
+		
 	}
 
 	@Override
@@ -581,6 +587,22 @@ public class CtiConnector extends Observable implements CallControlTerminalConne
 	public void terminalConnectionUnknown(CallControlTerminalConnectionEvent arg0) {
 		// TODO Auto-generated method stub
 		System.out.println("terminalConnectionUnknown");
+	}
+
+	public String getDeviceId() {
+		return deviceId;
+	}
+
+	public void setDeviceId(String deviceId) {
+		this.deviceId = deviceId;
+	}
+
+	public String getAgentId() {
+		return agentId;
+	}
+
+	public void setAgentId(String agentId) {
+		this.agentId = agentId;
 	}
 
 	
